@@ -7,12 +7,15 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
-    {
-        $products = Product::latest()->paginate(5);
-        return view('products.index', compact('products'))
-            ->with('i', (request()->input('page', 1) - 1) * 5);
-    }
+public function index()
+{
+    $products = Product::latest()->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $products
+    ]);
+}
 
     public function create()
     {
@@ -22,11 +25,22 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama' => 'required',
-            'detail' => 'required',
+            'title' => 'required|string|max:255',
+            'description' => 'required',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ]);
 
-        Product::create($request->all());
+        $fileName = null;
+        if ($request->hasFile('image')) {
+            $fileName = time() . '_' . $request->image->getClientOriginalName();
+            $request->image->storeAs('public/product/image', $fileName);
+        }
+
+        Product::create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'image' => $fileName
+        ]);
 
         return redirect()->route('products.index')
             ->with('success', 'Produk berhasil dibuat.');
@@ -45,21 +59,40 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $request->validate([
-            'nama' => 'required',
-            'detail' => 'required',
+            'title' => 'required|string|max:255',
+            'description' => 'required',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
         ]);
 
-        $product->update($request->all());
+        $fileName = $product->image;
+        if ($request->hasFile('image')) {
+            $fileName = time() . '_' . $request->image->getClientOriginalName();
+            $request->image->storeAs('public/product/image', $fileName);
+        }
+
+        $product->update([
+            'title' => $request->title,
+            'description' => $request->description,
+            'image' => $fileName
+        ]);
 
         return redirect()->route('products.index')
-            ->with('success', 'Produk berhasil diperbarui');
+            ->with('success', 'Produk berhasil diperbarui.');
     }
 
     public function destroy(Product $product)
-    {
-        $product->delete();
-
-        return redirect()->route('products.index')
-            ->with('success', 'Produk berhasil dihapus');
+{
+    // Hapus file gambar jika ada
+    if ($product->image && \Storage::exists('public/product/image/' . $product->image)) {
+        \Storage::delete('public/product/image/' . $product->image);
     }
+
+    $product->delete();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Produk berhasil dihapus.'
+    ]);
+}
+
 }

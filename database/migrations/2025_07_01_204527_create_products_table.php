@@ -10,8 +10,9 @@ class CreateProductsTable extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->string('nama');
-            $table->text('detail');
+            $table->string('title'); // menggantikan 'nama'
+            $table->text('description'); // menggantikan 'detail'
+            $table->string('image')->nullable(); // untuk menyimpan nama file gambar
             $table->timestamps();
         });
     }
